@@ -16,6 +16,13 @@ program.parse(process.argv);
 
 const options = program.opts();
 
+const port = Number(options.port);
+
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  console.error('Помилка: порт має бути числом від 1 до 65535');
+  process.exit(1);
+}
+
 async function readRequestBody(req) {
   const chunks = [];
 
@@ -165,7 +172,7 @@ if (req.method !== 'GET') {
       }
     });
 
-    server.listen(Number(options.port), options.host);
+server.listen(port, options.host);
 
     console.log('Сервер запущено');
   } catch (error) {
