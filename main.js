@@ -16,21 +16,94 @@ program.parse(process.argv);
 
 const options = program.opts();
 
+async function readRequestBody(req) {
+  const chunks = [];
+
+  for await (const chunk of req) {
+    chunks.push(chunk);
+  }
+
+  return Buffer.concat(chunks);
+}
+
 async function startServer() {
   try {
     await fs.mkdir(options.cache, { recursive: true });
 
     const server = http.createServer(async (req, res) => {
       try {
-        if (req.method !== 'GET') {
-          res.writeHead(405, {
-            'Content-Type': 'text/plain; charset=utf-8',
-            'Allow': 'GET'
-          });
-          res.end('Метод поки не підтримується');
-          return;
-        }
+if (req.method === 'PUT') {
+  const match = /^\/([1-5][0-9]{2})$/.exec(req.url);
 
+  if (!match) {
+    res.writeHead(404, {
+      'Content-Type': 'text/plain; charset=utf-8'
+    });
+    res.end('Неправильний код картинки');
+    return;
+  }
+
+  const code = match[1];
+  const filePath = path.join(options.cache, `${code}.jpg`);
+
+  const image = await readRequestBody(req);
+
+  await fs.writeFile(filePath, image);
+
+  res.writeHead(201, {
+    'Content-Type': 'text/plain; charset=utf-8'
+  });
+
+  res.end('Картинку збережено');
+  return;
+}
+
+if (req.method === 'DELETE') {
+  const match = /^\/([1-5][0-9]{2})$/.exec(req.url);
+
+  if (!match) {
+    res.writeHead(404, {
+      'Content-Type': 'text/plain; charset=utf-8'
+    });
+    res.end('Неправильний код картинки');
+    return;
+  }
+
+  const code = match[1];
+  const filePath = path.join(options.cache, `${code}.jpg`);
+
+  try {
+    await fs.unlink(filePath);
+
+    res.writeHead(200, {
+      'Content-Type': 'text/plain; charset=utf-8'
+    });
+
+    res.end('Картинку видалено');
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      res.writeHead(404, {
+        'Content-Type': 'text/plain; charset=utf-8'
+      });
+
+      res.end('Картинку не знайдено');
+    } else {
+      throw error;
+    }
+  }
+
+  return;
+}
+
+if (req.method !== 'GET') {
+  res.writeHead(405, {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Allow': 'GET, PUT,DELETE'
+  });
+
+  res.end('Метод не підтримується');
+  return;
+}
         const match = /^\/([1-5][0-9]{2})$/.exec(req.url);
 
         if (!match) {
